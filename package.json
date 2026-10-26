@@ -10,7 +10,7 @@
         "start": "node src/server.js",
         "dev": "node --watch src/server.js",
         "test": "node --test",
-        "check": "node --check src/server.js && node --check src/app.js && node --check src/portal-client.js && node --check src/normalizers.js"
+        "check": "node --check src/server.js && node --check src/app.js && node --check src/portal-client.js && node --check src/normalizers.js && node --check src/config.js"
     },
     "dependencies": {
         "cheerio": "^1.0.0",

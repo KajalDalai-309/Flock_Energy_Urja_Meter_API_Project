@@ -4,6 +4,7 @@ import swaggerUi from 'swagger-ui-express';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { config } from './config.js';
 import { PortalClient, PortalError } from './portal-client.js';
 import {
     unwrap,
@@ -14,9 +15,55 @@ import {
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 
-const spec = JSON.parse(
+const rawSpec = JSON.parse(
     await readFile(path.join(dir, '..', 'openapi.json'), 'utf8')
 );
+
+export function buildSpec(baseSpec = rawSpec, options = {}) {
+    const isProduction =
+        typeof options.isProduction === 'boolean'
+            ? options.isProduction
+            : config.isProduction;
+
+    const productionUrl = (
+        options.productionUrl ||
+        config.productionUrl ||
+        'https://flock-energy-urja-meter-api-project.onrender.com'
+    ).replace(/\/+$/, '');
+
+    const localUrl = (
+        options.localUrl ||
+        config.localUrl ||
+        `http://localhost:${config.port || 3000}`
+    ).replace(/\/+$/, '');
+
+    const servers = isProduction
+        ? [
+              {
+                  url: productionUrl,
+                  description: 'Production server (Render)',
+              },
+              {
+                  url: localUrl,
+                  description: 'Local development server',
+              },
+          ]
+        : [
+              {
+                  url: localUrl,
+                  description: 'Local development server',
+              },
+              {
+                  url: productionUrl,
+                  description: 'Production server (Render)',
+              },
+          ];
+
+    return {
+        ...baseSpec,
+        servers,
+    };
+}
 
 const pageNum = (v) =>
     v === undefined
@@ -122,8 +169,9 @@ async function findAllMetersForTransformer(portal, code) {
 }
 
 
-export function createApp(portal = new PortalClient()) {
+export function createApp(portal = new PortalClient(), options = {}) {
     const app = express();
+    const spec = options.spec || buildSpec(rawSpec, options);
 
     app.disable('x-powered-by');
     app.use(express.json({ limit: '100kb' }));
